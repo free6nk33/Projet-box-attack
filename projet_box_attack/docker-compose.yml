@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    container_name: vulnerable_web
+    ports:
+      - "80:80"         # Exposer le port HTTP
+      - "22:22"         # Exposer le port SSH
+      - "3306:3306"     # Exposer le port MySQL
+    volumes:
+      - /var/www/html
+    networks:
+      - vuln_net
+    stdin_open: true
+    tty: true
+
+  mysql:
+    image: mysql:5.7
+    container_name: vulnerable_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: dbuser
+      MYSQL_PASSWORD: dbpassword
+    ports:
+      - "3306:3306"
+    networks:
+      - vuln_net
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  snort:
+    image: snort/snort3:latest
+    container_name: snort
+    command: /bin/bash -c "snort -A console -c /etc/snort/snort.conf -i eth0"
+    networks:
+      - vuln_net
+    depends_on:
+      - web
+    volumes:
+      - ./snort-config:/etc/snort
+    stdin_open: true
+    tty: true
+
+networks:
+  vuln_net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
